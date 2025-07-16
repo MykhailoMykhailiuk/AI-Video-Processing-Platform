@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-4">My files</h2>
+
+  {% if uploads %}
+    <div class="row">
+      {% for upload in uploads %}
+        <div class="col-md-4 mb-4">
+          <div class="card h-100 shadow-sm">
+            {% if upload.file_url %}
+              <a href="{{ upload.file_url }}" target="_blank">
+                {% if upload.thumbnail %}
+                  <img src="{{ upload.thumbnail.url }}" class="card-img-top" alt="Preview">
+                {% else %}
+                  <div class="card-body">
+                    <p class="text-muted">{{ upload.file_url }}</p>
+                  </div>
+                {% endif %}
+              </a>
+            {% elif upload.file %}
+              <video class="card-img-top" controls>
+                <source src="{{ upload.file.url }}" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+            {% endif %}
+            <div class="card-body">
+              <p class="card-text">
+                {{ upload.get_filename }}
+              </p>
+              <p class="card-text">
+                {{ upload.created_at|date:"d M Y, H:i" }}
+              </p>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>It seems you don't have any files yet</p>
+  {% endif %}
+</div>
+
+{% endblock %}

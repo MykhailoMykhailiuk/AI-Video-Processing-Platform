@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "vt"
+version = "0.1.0"
+description = ""
+authors = ["MykhailoMykhailiuk <151375054+MykhailoMykhailiuk@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+django = "^5.2.4"
+yt-dlp = "^2025.6.30"
+celery = "^5.5.3"
+redis = "^6.2.0"
+whisper = "^1.1.10"
+transformers = "^4.53.2"
+pillow = "^11.3.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

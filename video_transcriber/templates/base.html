@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <title>Video Transcriber</title>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <div class="container-fluid">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+            <div class="navbar-nav">
+                <a class="nav-link active" aria-current="page" href="{% url 'home' %}">VideoTranscriber</a>
+                {% if user.is_authenticated %}
+                <a class="nav-link" href="{% url 'upload' %}">Upload</a>
+                <a class="nav-link" href="{% url 'dashboard' %}">{{ user.username }}</a>
+                <form method="post" action="{% url 'logout' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-link nav-link">Logout</button>
+                </form>
+                {% else %}
+                <a class="nav-link" href="{% url 'signup' %}">Crearte account</a>
+                <a class="nav-link" href="{% url 'login'%}">Login</a>
+                {% endif %}
+            </div>
+            </div>
+        </div>
+</nav>
+    {% block content %}
+    <div>
+        <h2 class="mb-4">Welcome to VideoTranscriber {{ user.username }}</h2>
+        <p class="lead">
+            This service allows you to recognize speech from videos, make transcriptions, summaries, and extract key points with timecodes.
+        </p>
+    </div>
+    <!-- Приклад YouTube-відео -->
+    <div class="d-flex justify-content-center mb-4">
+        <video src="media/Group_Man.mp4"
+               controls style="width: 800px; max-width: 100%;" 
+               class="object-fit-none border rounded" 
+               alt="Video guide how to use website">
+        </video>
+    </div>
+    {% endblock %}
+</body>
+</html>
