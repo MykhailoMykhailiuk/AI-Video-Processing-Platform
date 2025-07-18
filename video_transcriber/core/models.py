@@ -42,6 +42,7 @@ class OutputType(models.TextChoices):
     TRANSCRIPT = 'transcript'
     SUMMARY = 'summary'
     HIGHLIGHTS = 'highlights'
+    AUDIO = 'audio'
 
 
 class Output(models.Model):

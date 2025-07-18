@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 
 from .forms import UploadForm
 from .models import Upload, Output
-from .task import process_media_from_url
+from .tasks import process_media_from_url, extract_audio_from_file, extract_audio_from_url
 
 
 @login_required
@@ -26,7 +26,14 @@ def upload_view(request):
                 )
             
             if upload.file_url:
-                process_media_from_url(upload.id)
+                chain = (
+                    process_media_from_url.si(upload.id) |
+                    extract_audio_from_url.si(upload.id)
+                ).apply_async()
+                # process_media_from_url.apply_async(args=(upload.id,))
+                # extract_audio_from_url.apply_async(args=(upload.id,))
+            if upload.file:
+                extract_audio_from_file.apply_async(args=(upload.id,))
                 
             return redirect(to='upload')
     return render(request, template_name='core/upload.html', context={'form': form})
