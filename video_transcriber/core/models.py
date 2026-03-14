@@ -38,7 +38,7 @@ def file_path(instance, filename):
             OutputType.HIGHLIGHTS: 'docs',
         }.get(instance.output_type, 'other')
 
-        return f"{instance.upload.user.username}/outputs/{type_folder}/{stem}_{instance.output_type}{ext}"
+        return f"{instance.upload.user.username}/outputs/{type_folder}/{stem}_{instance.output_type}_{instance.upload.id}{ext}"
 
 
 class Upload(models.Model):
@@ -72,7 +72,7 @@ class Output(models.Model):
     upload = models.ForeignKey(Upload, on_delete=models.CASCADE)
     output_type = models.CharField(max_length=20, choices=OutputType.choices)
     content = models.TextField(blank=True, null=True)
-    file = models.FileField(upload_to=file_path, blank=True, null=True)
+    file = models.FileField(upload_to=file_path, blank=True, null=True, max_length=500)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

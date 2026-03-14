@@ -14,18 +14,37 @@ def upload_view(request):
         form = UploadForm(request.POST, request.FILES)
         
         if form.is_valid():
-            upload = form.save(commit=False)
-            upload.user = request.user
-            upload.save()
+            file_url = form.cleaned_data.get('file_url')
+            uploaded_file = form.cleaned_data.get('file')
+            output_types = list(form.cleaned_data.get('output_types', []))
 
-            output_types = form.cleaned_data.get('output_types', [])
+            existing = None
+
+            if file_url:
+                existing = Upload.objects.filter(
+                    file_url=file_url,
+                    user=request.user
+                ).first()
+            elif uploaded_file:
+                existing = Upload.objects.filter(
+                    file__endswith=uploaded_file.name,
+                    user=request.user
+                ).first()
+
+            if existing:
+                upload = existing
+            else:
+                upload = form.save(commit=False)
+                upload.user = request.user
+                upload.save()
+
             
             if upload.file_url:
                 process_media_from_url.delay(upload.id, output_types)
-            if upload.file:
+            elif upload.file:
                 process_media_from_file.delay(upload.id, output_types)
                 
-            return redirect(to='upload')
+            return redirect(to='dashboard')
     return render(request, template_name='core/upload.html', context={'form': form})
 
 

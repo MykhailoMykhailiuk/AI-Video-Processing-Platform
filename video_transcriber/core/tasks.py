@@ -18,6 +18,12 @@ from .models import Upload, Output, OutputType
 
 logger = logging.getLogger(__name__)
 
+def check_existing(upload, output_type, required_file=False):
+    query = Output.objects.filter(upload=upload, output_type=output_type)
+    if required_file:
+        query = query.filter(file__isnull=False)
+    return query.exists()
+
 
 @shared_task(bind=True)
 def exctract_thumbnail_and_title(self, upload_id, *args, **kwargs):
@@ -25,6 +31,10 @@ def exctract_thumbnail_and_title(self, upload_id, *args, **kwargs):
 
     try:
         upload = Upload.objects.get(id=upload_id)
+
+        if upload.thumbnail:
+            logger.info(f"Thumbnail already exists for Upload {upload.id}, skipping extraction")
+            return
 
         ydl_opts = {
             'quiet': True,
@@ -75,6 +85,10 @@ def extract_audio_from_file(self, upload_id, *args, **kwargs):
     try:    
         upload = Upload.objects.get(id=upload_id)
 
+        if check_existing(upload=upload, output_type=OutputType.AUDIO, required_file=True):
+            logger.info(f"Audio for Upload {upload.id} already exists, skipping extraction")
+            return
+
         with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
             with VideoFileClip(upload.file.path) as clip:
                 clip.audio.write_audiofile(temp_file.name)
@@ -109,6 +123,10 @@ def extract_audio_from_url(self, upload_id, *args, **kwargs):
 
     try:        
         upload = Upload.objects.get(id=upload_id)
+
+        if check_existing(upload=upload, output_type=OutputType.AUDIO, required_file=True):
+            logger.info(f"Audio for Upload {upload.id} already exists, skipping extraction")
+            return
 
         ydl_opts = {
             'format': 'bestaudio/best',
@@ -171,6 +189,10 @@ def transcribe_media(self, upload_id, *args, **kwargs):
     try:
         upload = Upload.objects.get(id=upload_id)
 
+        if check_existing(upload=upload, output_type=OutputType.TRANSCRIPTION):
+            logger.info(f"Transcription already exists for {upload_id}, skipping")
+            return
+        
         audio = Output.objects.filter(
             upload=upload,
             output_type=OutputType.AUDIO,
@@ -257,10 +279,11 @@ def process_media_from_file(self, upload_id, output_types):
 
         if not upload.file:
             logger.error(f"File {upload.id} not found!")
+            return
         
         if OutputType.TRANSCRIPTION in output_types:
             chain(
-                extract_audio_from_file.s(upload.id),
+                extract_audio_from_file.si(upload.id),
                 transcribe_media.si(upload.id)
             ).apply_async()
         elif OutputType.AUDIO in output_types:
@@ -279,17 +302,22 @@ def process_media_from_url(self, upload_id, output_types):
         upload = Upload.objects.get(id=upload_id)
 
         if not upload.file_url:
-            logger.error(f"File {upload.id} not found!")
-        
-        exctract_thumbnail_and_title.delay(upload.id)
+            logger.error(f"Upload {upload_id} has no URL!")
+            return
 
         if OutputType.TRANSCRIPTION in output_types:
             chain(
-                extract_audio_from_url.s(upload.id),
+                exctract_thumbnail_and_title.si(upload.id),
+                extract_audio_from_url.si(upload.id),
                 transcribe_media.si(upload.id)
             ).apply_async()
         elif OutputType.AUDIO in output_types:
-            extract_audio_from_url.delay(upload.id)
+            chain(
+                exctract_thumbnail_and_title.si(upload.id),
+                extract_audio_from_url.si(upload.id)
+            ).apply_async()
+        else:
+            exctract_thumbnail_and_title.delay(upload.id)
 
     except Exception as e:
         logger.error(f"[{self.__name__}] Media Processing Error for {upload.file_url} {e}")
