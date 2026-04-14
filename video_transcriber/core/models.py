@@ -18,7 +18,7 @@ def get_upload_folder(ext: str) -> str:
     elif ext in IMAGE_EXTENSIONS:
         return 'image'
     elif ext in TEXT_EXTENSIONS:
-        return 'docs'
+        return 'text'
     return 'other'
 
 def file_path(instance, filename):
