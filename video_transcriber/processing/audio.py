@@ -32,6 +32,7 @@ def get_audio_from_url(url: str, upload_id: int) -> str:
     downloaded_file = os.path.join(output_dir, f"audio_{upload_id}.mp3")
 
     ydl_opts = {
+            
             'format': 'bestaudio/best',
             'ffmpeg_location': shutil.which('ffmpeg'), 
             'retries': 3,
@@ -40,6 +41,7 @@ def get_audio_from_url(url: str, upload_id: int) -> str:
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
             }],
+            'noprogress': True,
             'quiet': True,
         }
 

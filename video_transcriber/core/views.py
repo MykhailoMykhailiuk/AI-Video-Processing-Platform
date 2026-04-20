@@ -17,6 +17,7 @@ def upload_view(request):
             file_url = form.cleaned_data.get('file_url')
             uploaded_file = form.cleaned_data.get('file')
             output_types = list(form.cleaned_data.get('output_types', []))
+            file_type = form.cleaned_data.get('save_to_file')
 
             existing = None
 
@@ -40,10 +41,10 @@ def upload_view(request):
 
             
             if upload.file_url:
-                process_media_from_url.delay(upload.id, output_types)
+                process_media_from_url.delay(upload.id, output_types, file_type)
             elif upload.file:
-                process_media_from_file.delay(upload.id, output_types)
-                
+                process_media_from_file.delay(upload.id, output_types, file_type)
+
             return redirect(to='dashboard')
     return render(request, template_name='core/upload.html', context={'form': form})
 

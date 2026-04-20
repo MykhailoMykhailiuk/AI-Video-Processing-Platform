@@ -14,6 +14,7 @@ from processing.thumbnail import get_thumbnail_and_title
 from processing.audio import get_audio_from_url, get_audio_from_video_file
 from processing.transcription import transcribe_audio
 from processing.summarization import summarize_text
+from processing.text import document_generation
 
 logger = logging.getLogger(__name__)
 
@@ -309,7 +310,55 @@ def set_upload_status_completed(self, upload_id):
     logger.info(f"Upload {upload_id} marked as COMPLETED")
 
 
-def build_pipeline(upload_id: int, output_types: list, source: str) -> list:
+@shared_task(bind=True)
+def generate_text_file(self, upload_id, output_type, file_extension):
+    '''
+    Generate a text file for the specified output type (TRANSCRIPTION or SUMMARY) 
+    and save it to the Output model.
+        - The content for the specified output type is retrieved from the Output model, 
+        and a text file is generated and saved back to the same Output instance.
+        - The task includes error handling to retry if the required content 
+        is not yet available, which can happen if the transcription or 
+        summarization tasks have not completed by the time this task runs. 
+        - The generated file is saved with a name that 
+        includes the output type and upload ID for easy identification.      
+
+    upload_id: ID of the Upload object to process
+    output_type: OutputType for which to generate the text file (e.g., TRANSCRIPTION or SUMMARY)
+    file_extension: File extension for the generated text file
+    '''
+    try:
+        upload = Upload.objects.get(id=upload_id)
+        output = Output.objects.filter(upload=upload, output_type=output_type).first()
+
+        if not output or not output.content:
+            logger.warning(f"Output of type {output_type} for Upload {upload_id} not found or has no content")
+            raise self.retry(countdown=30)
+        
+        file_path = document_generation(
+            text=output.content,
+            output_type=output_type,
+            upload_id=upload_id,
+            file_type=file_extension
+        )
+
+        with open(file_path, 'rb') as f:
+            output.file.save(
+                f"{output_type}_{upload_id}{file_extension}",
+                ContentFile(f.read()),
+            )
+            output.save()
+        logger.info(f"[{file_extension.upper()} file generated for Upload {upload.id} Output {output.id}]")
+
+    except Upload.DoesNotExist:
+        logger.error(f"Upload {upload_id} not found")
+        raise self.retry(countdown=120)
+    except Exception as e:
+        logger.error(f"Error generating text file for Upload {upload_id} Output {output_type}: {e}")
+        raise self.retry(exc=e, countdown=120)
+    
+
+def build_pipeline(upload_id: int, output_types: list, source: str, file_type: str) -> list:
     '''
     Returns a list of tasks to be executed for the given upload and output types in the correct order.
      - The pipeline is built based on the source of the media (file or URL) 
@@ -348,6 +397,10 @@ def build_pipeline(upload_id: int, output_types: list, source: str) -> list:
 
     if OutputType.SUMMARY in output_types:
         tasks.append(summarize_transcription.si(upload_id))
+    
+    if file_type in ['.txt', '.pdf', '.docx']:
+        for ot in output_types:
+            tasks.append(generate_text_file.si(upload_id, ot, file_type))
 
     tasks.append(set_upload_status_completed.si(upload_id))
 
@@ -355,7 +408,7 @@ def build_pipeline(upload_id: int, output_types: list, source: str) -> list:
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=120)
-def process_media_from_file(self, upload_id, output_types):
+def process_media_from_file(self, upload_id, output_types, file_type):
     '''
     Entry-point Celery task for processing media uploaded as a file.
 
@@ -384,7 +437,7 @@ def process_media_from_file(self, upload_id, output_types):
             return
         
         set_upload_status(upload_id, UploadStatus.PROCESSING)
-        tasks = build_pipeline(upload_id=upload_id, output_types=output_types, source='file')
+        tasks = build_pipeline(upload_id=upload_id, output_types=output_types, source='file', file_type=file_type)
         if tasks:
             chain(*tasks).apply_async()
 
@@ -394,7 +447,7 @@ def process_media_from_file(self, upload_id, output_types):
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=120)
-def process_media_from_url(self, upload_id, output_types):
+def process_media_from_url(self, upload_id, output_types, file_type):
     '''
     Entry-point Celery task for processing media provided via URL.
 
@@ -423,7 +476,7 @@ def process_media_from_url(self, upload_id, output_types):
             return
         
         set_upload_status(upload_id, UploadStatus.PROCESSING)
-        tasks = build_pipeline(upload_id=upload_id, output_types=output_types, source='url')
+        tasks = build_pipeline(upload_id=upload_id, output_types=output_types, source='url', file_type=file_type)
         if tasks:
             chain(*tasks).apply_async()
 

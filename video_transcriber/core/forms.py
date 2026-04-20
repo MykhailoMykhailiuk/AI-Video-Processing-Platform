@@ -6,7 +6,9 @@ from django.forms import (
     URLField, 
     ValidationError, 
     MultipleChoiceField,
-    CheckboxSelectMultiple)
+    CheckboxSelectMultiple,
+    ChoiceField,
+    Select)
 from django.core.validators import URLValidator
 
 from .models import Upload, OutputType
@@ -28,6 +30,14 @@ class UploadForm(ModelForm):
         label="Choose the processing type",
         choices=OutputType.choices,
         widget=CheckboxSelectMultiple
+    )
+
+    save_to_file = ChoiceField(
+        label="Save to file format",
+        choices=[('.txt', 'TXT'), ('.pdf', 'PDF'), ('.docx', 'DOCX')],
+        widget=Select(attrs={'class': 'form-select'}),
+        required=False,
+        initial='.txt'
     )
 
     class Meta:
