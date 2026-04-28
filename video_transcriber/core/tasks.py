@@ -348,6 +348,7 @@ def generate_text_file(self, upload_id, output_type, file_extension):
                 ContentFile(f.read()),
             )
             output.save()
+        
         logger.info(f"[{file_extension.upper()} file generated for Upload {upload.id} Output {output.id}]")
 
     except Upload.DoesNotExist:
@@ -356,7 +357,9 @@ def generate_text_file(self, upload_id, output_type, file_extension):
     except Exception as e:
         logger.error(f"Error generating text file for Upload {upload_id} Output {output_type}: {e}")
         raise self.retry(exc=e, countdown=120)
-    
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 def build_pipeline(upload_id: int, output_types: list, source: str, file_type: str) -> list:
     '''
