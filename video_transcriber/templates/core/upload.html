@@ -1,43 +1,99 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container py-5">
+    <div class="mx-auto" style="max-width: 720px;">
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-info">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
+        <!-- Header -->
+        <div class="text-center mb-5">
+            <h1 class="fw-bold mb-3">
+                Upload Your Video
+            </h1>
 
-    <h2 class="mb-4">Download video or provide the video link</h2>
-
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-
-        <div class="mb-3">
-            {{ form.file_url.label_tag }}
-            {{ form.file_url }}
+            <p class="text-muted fs-5">
+                Generate transcripts, summaries and audio from your videos.
+            </p>
         </div>
 
-        <div class="mb-3">
-            {{ form.file.label_tag }}
-            {{ form.file }}
+
+        <!-- Card-->
+        <div class="card border-0 shadow-sm rounded-4 p-4">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-info rounded-3">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data">
+
+                {% csrf_token %}
+                
+                <!-- URL Input -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">
+                        Video URL
+                    </label>
+
+                    {{ form.file_url }}
+
+                </div>
+
+                <!-- Divider -->
+                <div class="text-center text-muted  mb-4">
+                    OR
+                </div>
+
+                <!-- File Input -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">
+                        Video File
+                    </label>
+
+                    <div class="upload-box p-4 rounded-4 text-center border border-2 border-dashed">
+                        <div class="mb-2 fs-1">
+                            <i class="bi bi-cloud-arrow-up"></i>
+                        </div>
+
+                        <p class="mb-2 text-muted">
+                            Drag & drop your video here, or click to select a file.
+                        </p>
+
+                        {{ form.file }}
+
+                    </div>
+                </div>
+
+                <!-- Services -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">
+                        Choose services
+                    </label>
+                    <div class="service-box rounded-4 p-3">
+
+                        {{ form.output_types }}
+
+                    </div>
+                </div>
+
+                <!--File format-->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">
+                        Export format
+                    </label>
+
+                    {{ form.save_to_file }}
+
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="btn btn-dark w-100 py-3 rounded-4 fw-semibold">
+                    Process Video
+                </button>
+
+            </form>
         </div>
-
-        <div class="mb-3">
-            <label>Choose service:</label>
-            <div class="checkbox-group">
-                {{ form.output_types }}
-            </div>
-        </div>
-
-        <div class="mb-3">
-            {{ form.save_to_file.label_tag }}
-            {{ form.save_to_file }}
-        </div>
-
-        <button type="submit" class="btn btn-primary">Submit</button>
-
-    </form>
+    </div>
 </div>
 {% endblock %}

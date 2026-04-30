@@ -3,17 +3,32 @@
 
 {% block content %}
 <div class="container py-4">
-  <h2 class="mb-4">My files</h2>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="fw-bold mb-0">Dashboard</h2>
+      <small class="text-muted">Manage your uploads</small>
+    </div>
+
+    <a href="{% url 'upload' %}" class="btn btn-dark">
+      + New Upload
+    </a>
+  </div>
 
   {% if uploads %}
     <div class="row">
       {% for upload in uploads %}
         <div class="col-md-4 mb-4">
-          <div class="card h-100 shadow-sm">
+          <div class="card border-0 shadow-sm h-100 rounded-4 card-hover">
             {% if upload.file_url %}
               <a href="{{ upload.file_url }}" target="_blank">
                 {% if upload.thumbnail %}
-                  <img src="{{ upload.thumbnail.url }}" class="card-img-top" alt="Preview">
+                  <div class="position-relative">
+                    <img src="{{ upload.thumbnail.url }}" class="card-img-top rounded-top-4" style="height: 180px; object-fit: cover;">
+                    
+                    <span class="position-absolute top-0 end-0 m-2 badge bg-dark bg-opacity-75">
+                      {{ upload.get_filename|truncatechars:15 }}
+                    </span>
+                  </div>
                 {% else %}
                   <div class="card-body">
                     <p class="text-muted">{{ upload.file_url }}</p>
@@ -33,22 +48,24 @@
               
               <!-- Status badge -->
               <div class="mb-3">
-                {% if upload.status == 'pending' %}
-                  <span class="badge bg-info"><i class="bi bi-hourglass-split"></i> Pending</span>
-                {% elif upload.status == 'processing' %}
-                  <span class="badge bg-warning"><i class="bi bi-arrow-repeat"></i> Processing...</span>
-                {% elif upload.status == 'completed' %}
-                  <span class="badge bg-success"><i class="bi bi-check-circle"></i> Completed</span>
-                {% elif upload.status == 'failed' %}
-                  <span class="badge bg-danger"><i class="bi bi-exclamation-triangle"></i> Failed</span>
-                {% endif %}
+                <span class="badge rounded-pill px-3 py-2 
+                    {% if upload.status == 'completed' %}bg-success-subtle text-success
+                    {% elif upload.status == 'processing' %}bg-warning-subtle text-warning
+                    {% elif upload.status == 'failed' %}bg-danger-subtle text-danger
+                    {% else %}bg-secondary-subtle text-secondary{% endif %}">
+  
+                    {{ upload.status|title }}
+                  </span>
               </div>
             </div>
 
             <div class="card-footer bg-transparent border-top-0">
               <div class="d-flex justify-content-between align-items-center">
                 <small class="text-muted">{{ upload.created_at|date:"d M Y, H:i" }}</small>
-                <a href="{% url 'releted_files' upload.id %}" class="text-dark text-decoration-none hover-text-primary">Related files</a>
+                <a href="{% url 'releted_files' upload.id %}" 
+                  class="btn btn-sm btn-outline-dark w-60">
+                  View Results →
+                </a>
               </div>
             </div>
           </div>
