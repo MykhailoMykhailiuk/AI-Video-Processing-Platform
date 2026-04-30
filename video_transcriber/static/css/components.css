@@ -1,0 +1,101 @@
+.btn-dark {
+    background-color: #111;
+    border: none;
+}
+
+.btn-dark:hover {
+    background-color: #000;
+}
+
+.full-height-center {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* dashboard hover */
+.card-hover {
+  transition: all 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+}
+
+/* toggle */
+.toggle-btn {
+  min-width: 80px;
+}
+
+/* Notification styles */
+
+#notifications-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1050;
+    width: 100%;
+    max-width: 400px;
+}
+
+.notification-alert {
+    animation: slideIn 0.3s ease-out;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(450px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(450px);
+        opacity: 0;
+    }
+}
+
+.notification-alert.removing {
+    animation: slideOut 0.3s ease-out;
+}
+
+.notification-icon {
+    font-size: 1.2em;
+    margin-right: 10px;
+}
+
+.upload-box {
+    background: #fafafa;
+    transition: 0.2s ease;
+}
+
+.upload-box:hover {
+    background: #f4f4f4;
+    border-color: #111 !important;
+}
+
+.service-box {
+    background: #fafafa;
+}
+
+input,
+select,
+textarea {
+    border-radius: 12px !important;
+}
+
+.btn-dark {
+    border-radius: 14px;
+}
