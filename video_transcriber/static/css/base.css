@@ -1,0 +1,22 @@
+body {
+  background-color: #f8f9fb;
+}
+
+.container {
+  max-width: 1100px;
+}
+
+.card {
+  border-radius: 16px;
+}
+
+input, textarea {
+  border-radius: 10px;
+  padding: 10px;
+}
+
+input:focus, textarea:focus {
+  box-shadow: none;
+  border-color: #111;
+}
+

@@ -9,23 +9,96 @@
       <div class="card-body">
         <ul class="list-group list-group-flush">
           {% for output in outputs %}
-            <li class="list-group-item">
-              <p class="card-text"><strong>{{ output.output_type }}</strong></p>
+          <li class="list-group-item py-3">
+            <div class="d-flex justify-content-between align-items-center">
+
+              <!-- Left -->
+              <div>
+                <div class="fw-semibold">
+                  {{ output.output_type|title }}
+                </div>
+                <small class="text-muted">
+                  {{ output.created_at|date:"d M Y, H:i" }}
+                </small>
+              </div>
+
+              <!--Right buttons -->
+              <div class="d-flex gap-2">
+
                 {% if output.file %}
-              <a href="{{ output.file }}" target="_blank">{{ output.file }}</a>
-              <span class="text-muted float-end">{{ output.created_at|date:"d M Y, H:i" }}</span>
+                  <a href="{{ output.file.url }}" download 
+                    class="btn btn-sm btn-outline-dark">Download
+                  </a>
                 {% endif %}
 
                 {% if output.content %}
-              <p class="card-text">{{ output.content }}</p>
-              <span class="text-muted float-end">{{ output.created_at|date:"d M Y, H:i" }}</span>
+                  <button class="btn btn-sm btn-dark toggle-btn"
+                          data-target="content-{{ output.id }}">
+                    ↓ Show
+                  </button>
                 {% endif %}
-            </li>
+              </div>
+            </div>
+            <!-- Collapsible content -->
+            {% if output.content %}
+            <div id="content-{{ output.id }}"
+                 class="mt-3 p-3 bg-light rounded-3"
+                 style="display: none;">
+                 <textarea class="form-control mb-2" rows="6" readonly>
+                  {{ output.content }}
+                </textarea>
+                <button class="btn btn-sm btn-outline-secondary copy-btn">
+                  Copy
+                </button>
+            </div>
+            {% endif %}
+
+          </li>
             {% empty %}
             <li class="list-group-item">No related files found.</li>
           {% endfor %}
         </ul>
       </div>
     {% endif%}
+
+<style>
+  .toggle-btn {
+    min-width: 80px;
+  }
+
+  textarea {
+    font-size: 14px;
+  }
+</style>
+
+<script>
+  // Toggle Show/Hide content
+  document.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', function(){
+      const targetId = this.getAttribute('data-target');
+      const el = document.getElementById(targetId);
+
+      if (el.style.display === 'none') {
+        el.style.display = 'block';
+        this.textContent = '↑ Hide';
+      } else {
+        el.style.display = 'none';
+        this.textContent = '↓ Show';
+      }
+    });
+  });
+
+  // Copy text
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', function(){
+      const textarea = this.parentElement.querySelector('textarea');
+      textarea.select();
+      document.execCommand('copy');
+
+      this.textContent = 'Copied!';
+      setTimeout(() => this.textContent = 'Copy', 2000);
+    });
+  });
+</script>
 
 {% endblock %}

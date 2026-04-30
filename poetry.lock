@@ -2889,6 +2889,21 @@ files = [
 six = "*"
 
 [[package]]
+name = "whitenoise"
+version = "6.12.0"
+description = "Radically simplified static file serving for WSGI applications"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "whitenoise-6.12.0-py3-none-any.whl", hash = "sha256:fc5e8c572e33ebf24795b47b6a7da8da3c00cff2349f5b04c02f28d0cc5a3cc2"},
+    {file = "whitenoise-6.12.0.tar.gz", hash = "sha256:f723ebb76a112e98816ff80fcea0a6c9b8ecde835f8ddda25df7a30a3c2db6ad"},
+]
+
+[package.extras]
+brotli = ["brotli"]
+
+[[package]]
 name = "yt-dlp"
 version = "2025.6.30"
 description = "A feature-rich command-line audio/video downloader"
@@ -2959,4 +2974,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "ea871dbb2a8bdd0a9d0d70ce9016bbafe34cd2a0ba53d68e36d0acf54bbf341a"
+content-hash = "3fcc0a13d77d3988af90e28b6339ef17720cb1ac7d655ff6726ed3c7d7f935c9"
