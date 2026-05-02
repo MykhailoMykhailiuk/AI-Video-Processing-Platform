@@ -13,4 +13,4 @@ class PremiumSubscription(models.Model):
         return False
 
     def __str__(self):
-        return f"{self.user.username} - {'Active' if self.is_active else 'Inactive'}"
+        return f"{self.user.username} - {'Active' if self.is_active() else 'Inactive'}"
