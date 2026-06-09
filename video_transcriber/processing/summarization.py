@@ -17,6 +17,7 @@ def get_summarizer():
         model_name = "csebuetnlp/mT5_multilingual_XLSum"
         SUMMARIZER_TOKENIZER = AutoTokenizer.from_pretrained(
             model_name,
+            legacy=True,
             model_max_length=512
         )
         SUMMARIZER = pipeline(
