@@ -1,37 +1,23 @@
-import torch
-import torchaudio
-from transformers import WhisperForConditionalGeneration, WhisperProcessor
+from faster_whisper import WhisperModel
 
 
 WHISPER_MODEL = None
-WHISPER_PROCESSOR = None
 
 
-def get_device() -> str:
+def get_whisper_model():
     '''
-    Returns the device to be used for inference. 
-    If a GPU is available, it returns "cuda", otherwise it returns "cpu".
+    Loads the Whisper model if it hasn't been loaded already and returns it.
     '''
 
-    if torch.cuda.is_available():
-        return "cuda"
-    return "cpu"
-
-
-def get_whisper_model_and_processor(device: str):
-    '''
-    Returns the Whisper model and processor. 
-    If they are not already loaded, it loads them and moves the model to the specified device.
-
-    device: The device to move the model to ("cuda" or "cpu").
-    returns: A tuple containing the Whisper model and processor.
-    '''
-
-    global WHISPER_MODEL, WHISPER_PROCESSOR
-    if WHISPER_MODEL is None or WHISPER_PROCESSOR is None:
-        WHISPER_MODEL = WhisperForConditionalGeneration.from_pretrained("openai/whisper-small").to(device)
-        WHISPER_PROCESSOR = WhisperProcessor.from_pretrained("openai/whisper-small")
-    return WHISPER_MODEL, WHISPER_PROCESSOR
+    global WHISPER_MODEL
+    if WHISPER_MODEL is None:
+        WHISPER_MODEL = WhisperModel(
+            'small',
+            device='cpu',
+            compute_type='int8'
+        )
+    
+    return WHISPER_MODEL
 
 
 def transcribe_audio(audio_path: str) -> str:
@@ -44,44 +30,42 @@ def transcribe_audio(audio_path: str) -> str:
     audio_path: The path to the audio file to be transcribed.
     returns: The transcribed text from the audio file.
     '''
-    device = get_device()
-    model, processor = get_whisper_model_and_processor(device)
+   
+    model = get_whisper_model()
+    segments, info = model.transcribe(audio_path, beam_size=5)
 
-    waveform, sample_rate = torchaudio.load(audio_path)
-    if sample_rate != 16000:
-        resampler = torchaudio.transforms.Resample(sample_rate, 16000)
-        waveform = resampler(waveform)
+    full_text = []
+    timestamps = []
 
-    if waveform.shape[0] > 1:
-        waveform = torch.mean(waveform, dim=0, keepdim=True)
+    for segment in segments:
+        text = segment.text.strip()
+        full_text.append(text)
+        timestamps.append({
+            'start': round(segment.start, 2),
+            'end': round(segment.end, 2),
+            'text': text
+        })
 
-    waveform = waveform[0].numpy()
+    return {
+        'text': ' '.join(full_text),
+        'timestamps': timestamps
+    }
 
-    chunk_size = 30 * 16000
-    overlap_size = 2 * 16000
-    total_length = waveform.shape[0]
-    num_chunks = (total_length + chunk_size - 1) // chunk_size
-    all_text = []
+def format_timestamps(timestamp: float) -> str:
+    '''
+    Formats a timestamp in seconds into a string in the format HH:MM:SS. 
+    If the timestamp is less than an hour, it will be formatted as MM:SS.
 
-    for i in range(num_chunks):
-        start = max(0, i * chunk_size - overlap_size)
-        end = min((i + 1) * chunk_size, total_length)
-        chunk = waveform[start:end]
+    timestamp: The timestamp in seconds to be formatted.
+    return: The formatted timestamp string.
+    '''
+    
+    timestamp = int(timestamp)
+    hours = timestamp // 3600
+    minutes = (timestamp % 3600) // 60
+    seconds = timestamp % 60
 
-        inputs = processor(
-            chunk,
-            return_tensors="pt",
-            sampling_rate=16000
-        ).input_features.to(device)
-
-        with torch.no_grad():
-            generated_ids = model.generate(
-                inputs,
-                task = "transcribe",
-                repetition_penalty=1.3,
-            )
-
-        text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        all_text.append(text)
-
-    return " ".join(all_text)
+    if hours:
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    
+    return f"{minutes:02d}:{seconds:02d}"

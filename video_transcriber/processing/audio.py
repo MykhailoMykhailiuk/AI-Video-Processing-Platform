@@ -32,17 +32,19 @@ def get_audio_from_url(url: str, upload_id: int) -> str:
     downloaded_file = os.path.join(output_dir, f"audio_{upload_id}.mp3")
 
     ydl_opts = {
-            
-            'format': 'bestaudio/best',
-            'ffmpeg_location': shutil.which('ffmpeg'), 
-            'retries': 3,
-            'outtmpl': os.path.join(output_dir, f"audio_{upload_id}.%(ext)s"),
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-            }],
-            'noprogress': True,
-            'quiet': True,
+        
+        'format': 'bestaudio/best',
+        'quiet': False,
+        'no_warnings': True,
+        'socket_timeout': 30,
+        'ffmpeg_location': shutil.which('ffmpeg'), 
+        'retries': 3,
+        'outtmpl': os.path.join(output_dir, f"audio_{upload_id}.%(ext)s"),
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+        }],
+        'noprogress': True,
         }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:

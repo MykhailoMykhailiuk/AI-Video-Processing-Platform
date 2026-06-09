@@ -35,7 +35,7 @@ def file_path(instance, filename):
             OutputType.AUDIO: 'audio',
             OutputType.TRANSCRIPTION: 'docs',
             OutputType.SUMMARY: 'docs',
-            OutputType.HIGHLIGHTS: 'docs',
+            OutputType.TIMESTAMPS: 'docs',
         }.get(instance.output_type, 'other')
 
         return f"{instance.upload.user.username}/outputs/{type_folder}/{stem}_{instance.output_type}_{instance.upload.id}{ext}"
@@ -72,7 +72,7 @@ class OutputType(models.TextChoices):
 
     TRANSCRIPTION = 'transcript'
     SUMMARY = 'summary'
-    HIGHLIGHTS = 'highlights'
+    TIMESTAMPS = 'timestamps'
     AUDIO = 'audio'
 
 
