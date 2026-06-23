@@ -1,9 +1,12 @@
+import logging
+
 from django.shortcuts import render, redirect
 from django.views import View
 from django.contrib import messages
 
 from .forms import SignupForm
 
+logger = logging.getLogger('accounts')
 
 class SignupView(View):
     template_name = 'accounts/signup.html'
@@ -17,6 +20,7 @@ class SignupView(View):
         if form.is_valid():
             form.save()
             username = form.cleaned_data['username']
+            logger.info(f"New account created for username: {username}")
             messages.success(request, f"Account created for {username}")
             return redirect(to='accounts:login')
         return render(request, self.template_name, {'form': form})

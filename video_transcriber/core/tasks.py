@@ -26,26 +26,21 @@ def is_permanent_error(exc):
     
     Permanent errors include:
     - Database object not found errors (DoesNotExist, ObjectDoesNotExist)
-    - Download errors from yt-dlp
     - Type/Value errors (invalid data)
-    - Source file not found errors
-    - Key errors (missing keys in data)
     
     Temporary errors (should be retried):
     - Network/connection errors
     - Timeout errors
     - Storage/filesystem errors (may resolve)
+    - DownloadError (now handled gracefully in processing layer)
     
     exc: Exception to check
     return: True if permanent, False if temporary
     '''
     permanent_error_types = (
         ObjectDoesNotExist,  # Django DoesNotExist
-        DownloadError,       # yt-dlp download errors
         TypeError,           # Invalid data type
         ValueError,          # Invalid value
-        AttributeError,      # Missing attribute (code error)
-        KeyError,            # Missing key in dictionary
     )
     
     if isinstance(exc, permanent_error_types):
@@ -130,12 +125,12 @@ def exctract_thumbnail_and_title(self, upload_id, *args, **kwargs):
                         save=True
                     )
             except Exception as e:
-                logger.error(f"[{self.__name__}] Thumbnail Download Error: {e}")
+                logger.error(f"User: {upload.user_id} [{self.__name__}] Thumbnail Download Error: {e}")
 
         upload.save()
 
     except Exception as e:
-        logger.error(f"[{self.__name__}] Media Processing Error for {upload.file_url} {e}")
+        logger.error(f"User: {upload.user_id} [{self.__name__}] Media Processing Error for {upload_id} {e}")
 
         if is_permanent_error(e):
             set_upload_status(upload_id, UploadStatus.FAILED)
@@ -186,7 +181,7 @@ def extract_audio_from_file(self, upload_id, *args, **kwargs):
             output.save()
 
     except Exception as e:
-        logger.error(f"[{self.__name__}] Media Processing Error for {upload.file} {e}")
+        logger.error(f"User: {upload.user_id} [{self.__name__}] Media Processing Error for {upload_id} {e}")
 
         if is_permanent_error(e):
             set_upload_status(upload_id, UploadStatus.FAILED)
@@ -245,7 +240,7 @@ def extract_audio_from_url(self, upload_id, *args, **kwargs):
             )
 
     except Exception as e:
-        logger.error(f"[{self.__name__}] Media Processing Error for {upload.file_url} {e}")
+        logger.error(f"User: {upload.user_id} [{self.__name__}] Media Processing Error for {upload_id} {e}")
 
         if is_permanent_error(e):
             set_upload_status(upload_id, UploadStatus.FAILED)
@@ -279,7 +274,7 @@ def transcribe_media(self, upload_id, *args, **kwargs):
         upload = Upload.objects.get(id=upload_id)
 
         if check_existing(upload=upload, output_type=OutputType.TRANSCRIPTION):
-            logger.info(f"Transcription already exists for {upload_id}, skipping")
+            logger.info(f"User: {upload.user_id} [{self.__name__}] Transcription already exists for {upload_id}, skipping")
             return
         
         audio = Output.objects.filter(
@@ -289,11 +284,11 @@ def transcribe_media(self, upload_id, *args, **kwargs):
         ).first()
 
         if not audio or not audio.file:
-            logger.warning(f"Audio for {upload.id} not found, retrying...")
+            logger.warning(f"User: {upload.user_id} [{self.__name__}] Audio for {upload.id} not found, retrying...")
             raise self.retry(countdown=30)
 
         if not default_storage.exists(audio.file.name):
-            logger.error(f"File {audio.file.name} not found in the storage!")
+            logger.error(f"User: {upload.user_id} [{self.__name__}] File {audio.file.name} not found in the storage!")
             raise self.retry(countdown=60)
 
         audio_path = default_storage.path(audio.file.name)
@@ -318,10 +313,10 @@ def transcribe_media(self, upload_id, *args, **kwargs):
             output_type=OutputType.TIMESTAMPS,
             content=timestamp
         )
-        logger.info(f"[{self.__name__}] Transcription saved for Upload {upload.id} with Output {output.id}")
+        logger.info(f"[{self.__name__}] Transcription saved for Upload {upload_id} with Output {output.id}")
     
     except Exception as e:
-        logger.error(f"[{self.__name__}] Transcribing error for {upload_id} {e}")
+        logger.error(f"User: {upload.user_id} [{self.__name__}] Transcribing error for {upload_id} {e}")
 
         if is_permanent_error(e):
             set_upload_status(upload_id, UploadStatus.FAILED)
@@ -356,7 +351,7 @@ def summarize_transcription(self, upload_id, *args, **kwargs):
         upload = Upload.objects.get(id=upload_id)
     
         if check_existing(upload=upload, output_type=OutputType.SUMMARY):
-            logger.info(f"Summary already exists for {upload_id}, skipping")
+            logger.info(f"User: {upload.user_id} [{self.__name__}] Summary already exists for {upload_id}, skipping")
             return
         
         transcript = Output.objects.filter(
@@ -365,14 +360,14 @@ def summarize_transcription(self, upload_id, *args, **kwargs):
         ).first()
 
         if not transcript or not transcript.content:
-            logger.warning(f"Transcription for {upload_id} not found, retrying...")
+            logger.warning(f"User: {upload.user_id} [{self.__name__}] Transcription for {upload_id} not found, retrying...")
             raise self.retry(countdown=30)
         
         if len(transcript.content.strip()) < 50:
-            logger.warning(f"Transcription for {upload_id} is too short to summarize: '{transcript.content}'")
+            logger.warning(f"User: {upload.user_id} [{self.__name__}] Transcription for {upload_id} is too short to summarize: '{transcript.content}'")
             return
         
-        logger.info(f"Transcript length for {upload_id}: {len(transcript.content)} chars, {len(transcript.content.split())} words")
+        logger.info(f"User: {upload.user_id} [{self.__name__}] Transcript length for {upload_id}: {len(transcript.content)} chars, {len(transcript.content.split())} words")
 
         final_summary = summarize_text(transcript.content)
 
@@ -382,17 +377,17 @@ def summarize_transcription(self, upload_id, *args, **kwargs):
             content=final_summary
         )
 
-        logger.info(f"[Summary saved for Upload {upload.id} with Output {output.id}]")
+        logger.info(f"User: {upload.user_id} [{self.__name__}] Summary saved for Upload {upload_id} with Output {output.id}")
 
     except Exception as e:
-        logger.error(f"[{self.__name__}] Summarizing error for {upload_id} {e}")
+        logger.error(f"User: {upload.user_id} [{self.__name__}] Summarizing error for {upload_id} {e}")
 
         if is_permanent_error(e):
             set_upload_status(upload_id, UploadStatus.FAILED)
             raise
         
         if self.request.retries >= self.max_retries:
-            logger.error(f"Max retries exceeded for {self.__name__}")
+            logger.error(f"User: {upload.user_id} [{self.__name__}] Max retries exceeded for {self.__name__}")
             set_upload_status(upload_id, UploadStatus.FAILED)
             raise
 
@@ -436,7 +431,7 @@ def generate_text_file(self, upload_id, output_type, file_extension):
         output = Output.objects.filter(upload=upload, output_type=output_type).first()
 
         if not output or not output.content:
-            logger.warning(f"Output of type {output_type} for Upload {upload_id} not found or has no content")
+            logger.warning(f"User: {upload.user_id} [{self.__name__}] Output of type {output_type} for Upload {upload_id} not found or has no content")
             raise self.retry(countdown=30)
         
         file_path = document_generation(
@@ -453,20 +448,20 @@ def generate_text_file(self, upload_id, output_type, file_extension):
             )
             output.save()
         
-        logger.info(f"[{file_extension.upper()} file generated for Upload {upload.id} Output {output.id}]")
+        logger.info(f"User: {upload.user_id} [{self.__name__}] [{file_extension.upper()} file generated for Upload {upload.id} Output {output.id}]")
 
     except Upload.DoesNotExist:
-        logger.error(f"Upload {upload_id} not found")
+        logger.error(f"User: {upload.user_id} [{self.__name__}] Upload {upload_id} not found")
         return
     except Exception as e:
-        logger.error(f"Error generating text file for Upload {upload_id} Output {output_type}: {e}")
+        logger.error(f"User: {upload.user_id} [{self.__name__}] Error generating text file for Upload {upload_id} Output {output_type}: {e}")
 
         if is_permanent_error(e):
             set_upload_status(upload_id, UploadStatus.FAILED)
             raise
         
         if self.request.retries >= self.max_retries:
-            logger.error(f"Max retries exceeded for {self.__name__}")
+            logger.error(f"User: {upload.user_id} [{self.__name__}] Max retries exceeded for {self.__name__}")
             set_upload_status(upload_id, UploadStatus.FAILED)
             raise
 
@@ -551,7 +546,7 @@ def process_media_from_file(self, upload_id, output_types, file_type):
         upload = Upload.objects.get(id=upload_id)
 
         if not upload.file:
-            logger.error(f"File {upload.id} not found!")
+            logger.error(f"User: {upload.user_id} [{self.__name__}] File {upload.id} not found!")
             return
         
         set_upload_status(upload_id, UploadStatus.PROCESSING)
@@ -560,14 +555,14 @@ def process_media_from_file(self, upload_id, output_types, file_type):
             chain(*tasks).apply_async()
 
     except Exception as e:
-        logger.error(f"[{self.__name__}] Media Processing Error for {upload.file} {e}")
+        logger.error(f"User: {upload.user_id} [{self.__name__}] Media Processing Error for {upload.file} {e}")
         
         if is_permanent_error(e):
             set_upload_status(upload_id, UploadStatus.FAILED)
             raise
         
         if self.request.retries >= self.max_retries:
-            logger.error(f"Max retries exceeded for {self.__name__}")
+            logger.error(f"User: {upload.user_id} [{self.__name__}] Max retries exceeded for {self.__name__}")
             set_upload_status(upload_id, UploadStatus.FAILED)
             raise
 
@@ -600,7 +595,7 @@ def process_media_from_url(self, upload_id, output_types, file_type):
         upload = Upload.objects.get(id=upload_id)
 
         if not upload.file_url:
-            logger.error(f"Upload {upload_id} has no URL!")
+            logger.error(f"User: {upload.user_id} [{self.__name__}] Upload {upload_id} has no URL!")
             return
         
         set_upload_status(upload_id, UploadStatus.PROCESSING)
@@ -609,15 +604,15 @@ def process_media_from_url(self, upload_id, output_types, file_type):
             chain(*tasks).apply_async()
 
     except Exception as e:
-        logger.error(f"[{self.__name__}] Media Processing Error for {upload.file_url} {e}")
+        logger.error(f"User: {upload.user_id} [{self.__name__}] Media Processing Error for {upload.file_url} {e}")
 
         if is_permanent_error(e):
-            logger.error(f"Permanent error in {self.__name__}, not retrying: {e}")
+            logger.error(f"User: {upload.user_id} [{self.__name__}] Permanent error in {self.__name__}, not retrying: {e}")
             set_upload_status(upload_id, UploadStatus.FAILED)
             raise
         
         if self.request.retries >= self.max_retries:
-            logger.error(f"Max retries exceeded for {self.__name__}")
+            logger.error(f"User: {upload.user_id} [{self.__name__}] Max retries exceeded for {self.__name__}")
             set_upload_status(upload_id, UploadStatus.FAILED)
             raise
 

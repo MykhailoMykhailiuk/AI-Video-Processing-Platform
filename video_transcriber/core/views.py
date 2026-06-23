@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 
@@ -5,6 +7,7 @@ from .forms import UploadForm
 from .models import Upload, Output
 from .tasks import process_media_from_url, process_media_from_file
 
+logger = logging.getLogger('core.views')
 
 @login_required
 def upload_view(request):
@@ -14,6 +17,7 @@ def upload_view(request):
         form = UploadForm(request.POST, request.FILES)
         
         if form.is_valid():
+            
             file_url = form.cleaned_data.get('file_url')
             uploaded_file = form.cleaned_data.get('file')
             output_types = list(form.cleaned_data.get('output_types', []))
@@ -41,8 +45,10 @@ def upload_view(request):
 
             
             if upload.file_url:
+                logger.info(f"User {request.user.username} uploaded URL: {upload.file_url}")
                 process_media_from_url.delay(upload.id, output_types, file_type)
             elif upload.file:
+                logger.info(f"User {request.user.username} uploaded file: {upload.file.name}")
                 process_media_from_file.delay(upload.id, output_types, file_type)
 
             return redirect(to='dashboard')
@@ -52,6 +58,7 @@ def upload_view(request):
 @login_required
 def dashboard_view(request):
     uploads = Upload.objects.filter(user=request.user).order_by('-created_at')
+    logger.info(f"User {request.user.username} accessed the dashboard with {uploads.count()} uploads.")
     return render(request, template_name='core/dashboard.html', context={'uploads': uploads})
 
 
@@ -63,4 +70,5 @@ def output_view(request, upload_id):
         return redirect(to='dashboard')
     
     outputs = Output.objects.filter(upload=upload)
+    logger.info(f"User {request.user.username} accessed related files for upload ID: {upload_id} with {outputs.count()} outputs.")
     return render(request, template_name='core/releted_files.html', context={'upload': upload, 'outputs': outputs})
