@@ -19,4 +19,7 @@ COPY pyproject.toml poetry.lock* ./
 
 RUN poetry install --only main --no-root
 
+# Force update yt-dlp to the latest version (fixes YouTube issues)
+RUN pip install --upgrade yt-dlp
+
 COPY . .
